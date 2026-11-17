@@ -1,0 +1,457 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Painel de Contactos - CRM Imobiliário</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="{% static 'crm_core/style.css' %}?v=3">
+</head>
+<body class="pb-5">
+    <nav class="navbar navbar-dark mb-4 py-3 shadow-sm" style="background-color: #0618B5; border-bottom: 4px solid #be123c;">
+        <div class="container d-flex justify-content-between align-items-center" style="max-width: 1280px;">
+            <span class="navbar-brand mb-0 h4 fw-bold text-white">
+                🏢 CRM Imobiliário <span class="fw-light text-white-50 ms-2">| Painel de Contactos</span>
+            </span>
+            <div class="d-flex align-items-center gap-3">
+                <span class="text-white small d-none d-md-inline">
+                    👤 Olá, <strong>{{ request.user.username }}</strong>
+                </span>
+                <button type="button" class="btn px-3 shadow-sm fw-bold" data-bs-toggle="modal" data-bs-target="#modalCampanhaLote" style="background-color: #be123c; color: #ffffff; border: 1.5px solid #ffffff;">
+                    📣 Campanha em Lote ({{ total_elegiveis_lote }})
+                </button>
+                <button type="button" class="btn btn-outline-corporate px-3 shadow-sm" data-bs-toggle="modal" data-bs-target="#modalImportarExcel" style="background-color: #ffffff; color: #0618B5; border: 1.5px solid #0618B5; font-weight: 600;">
+                    📥 Importar Excel
+                </button>
+                <a href="{% url 'criar_cliente' %}" class="btn btn-outline-corporate px-3 shadow-sm" style="background-color: #ffffff; color: #0618B5; border: 1.5px solid #0618B5; font-weight: 600;">
+                    + Novo Cliente
+                </a>
+                <form method="post" action="{% url 'logout' %}" class="m-0">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-sm px-3 fw-semibold" style="background-color: #be123c; color: #ffffff; border: 1px solid #ffffff;">
+                        🚪 Sair
+                    </button>
+                </form>
+            </div>
+        </div>
+    </nav>
+
+        <div class="container" style="max-width: 1280px;">
+        {% if messages %}
+            {% for message in messages %}
+                <div class="alert {% if message.tags == 'error' %}badge-danger-soft{% else %}badge-warning-soft{% endif %} p-3 mb-4 rounded shadow-sm d-flex justify-content-between align-items-center">
+                    <span>{{ message }}</span>
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            {% endfor %}
+        {% endif %}
+
+        <!-- Notificação Automática de Cancelamento de Consentimento (Opt-out RGPD) -->
+        {% if ultimos_optouts %}
+        <div class="alert shadow-sm mb-4 p-3 rounded bg-white" style="border-left: 5px solid #be123c; border-top: 1px solid #fecaca; border-right: 1px solid #fecaca; border-bottom: 1px solid #fecaca;">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <strong style="color: #be123c;">🔔 Notificação de Privacidade (RGPD):</strong>
+                    <span class="text-secondary ms-1">Registo recente de clientes que cancelaram o consentimento de marketing:</span>
+                </div>
+                <button class="btn btn-sm btn-light border text-secondary" type="button" data-bs-toggle="collapse" data-bs-target="#listaOptoutsCollapse">
+                    Ver detalhes ({{ ultimos_optouts|length }})
+                </button>
+            </div>
+            <div class="collapse show mt-2 pt-2 border-top" id="listaOptoutsCollapse">
+                <ul class="mb-0 small text-secondary">
+                    {% for item in ultimos_optouts %}
+                    <li class="mb-1">
+                        <strong style="color: #0618B5;">{{ item.cliente.nome_completo }}</strong> revogou o consentimento em {{ item.data_interacao|date:"d/m/Y às H:i" }} — 
+                        <a href="{% url 'detalhe_cliente' item.cliente.pk %}" class="fw-bold text-decoration-none" style="color: #be123c;">Ver Ficha</a>
+                    </li>
+                    {% endfor %}
+                </ul>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Cartão de Filtros -->
+        <div class="card shadow-sm mb-4 p-3 bg-white" style="border-left: 5px solid #0618B5;">
+            <form method="get" action="{% url 'listar_clientes' %}" class="row g-2 align-items-center">
+                <!-- LINHA 1: Pesquisa por Texto, Qualificação (Lista) e Interesse Comercial -->
+                <div class="col-md-5">
+                    <input type="text" name="q" class="form-control" style="border-color: #0618B5;" placeholder="👤 Nome do cliente..." value="{{ request.GET.q }}">
+                </div>
+                <div class="col-md-3">
+                    <select name="qualificacao" class="form-select" style="border-color: #0618B5; color: #0618B5; font-weight: 500;">
+                        <option value="">🏷️ Qualificação...</option>
+                        <option value="Comprador" {% if request.GET.qualificacao == 'Comprador' %}selected{% endif %}>🏷️ Comprador</option>
+                        <option value="Vendedor" {% if request.GET.qualificacao == 'Vendedor' %}selected{% endif %}>🏷️ Vendedor</option>
+                        <option value="Proprietário / Senhorio" {% if request.GET.qualificacao == 'Proprietário / Senhorio' %}selected{% endif %}>🏷️ Proprietário / Senhorio</option>
+                        <option value="Arrendatário" {% if request.GET.qualificacao == 'Arrendatário' %}selected{% endif %}>🏷️ Arrendatário</option>
+                        <option value="Investidor" {% if request.GET.qualificacao == 'Investidor' %}selected{% endif %}>🏷️ Investidor</option>
+                        <option value="Lead / Potencial Cliente" {% if request.GET.qualificacao == 'Lead / Potencial Cliente' %}selected{% endif %}>🏷️ Lead / Potencial Cliente</option>
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <input type="text" name="interesse" class="form-control" style="border-color: #0618B5;" placeholder="🏠 Área de interesse (ex: T3 em Sintra)..." value="{{ request.GET.interesse }}">
+                </div>
+                
+                <!-- LINHA 2: Filtros de Datas (Aniversário + Mês e Ano de Validade) + Botões -->
+                <div class="col-md-3 mt-2">
+                    <select name="mes_aniversario" class="form-select" style="border-color: #0618B5; color: #0618B5; font-weight: 500;">
+                        <option value="">🎂 Mês de Aniversário...</option>
+                        <option value="1" {% if request.GET.mes_aniversario == '1' %}selected{% endif %}>🎂 Janeiro</option>
+                        <option value="2" {% if request.GET.mes_aniversario == '2' %}selected{% endif %}>🎂 Fevereiro</option>
+                        <option value="3" {% if request.GET.mes_aniversario == '3' %}selected{% endif %}>🎂 Março</option>
+                        <option value="4" {% if request.GET.mes_aniversario == '4' %}selected{% endif %}>🎂 Abril</option>
+                        <option value="5" {% if request.GET.mes_aniversario == '5' %}selected{% endif %}>🎂 Maio</option>
+                        <option value="6" {% if request.GET.mes_aniversario == '6' %}selected{% endif %}>🎂 Junho</option>
+                        <option value="7" {% if request.GET.mes_aniversario == '7' %}selected{% endif %}>🎂 Julho</option>
+                        <option value="8" {% if request.GET.mes_aniversario == '8' %}selected{% endif %}>🎂 Agosto</option>
+                        <option value="9" {% if request.GET.mes_aniversario == '9' %}selected{% endif %}>🎂 Setembro</option>
+                        <option value="10" {% if request.GET.mes_aniversario == '10' %}selected{% endif %}>🎂 Outubro</option>
+                        <option value="11" {% if request.GET.mes_aniversario == '11' %}selected{% endif %}>🎂 Novembro</option>
+                        <option value="12" {% if request.GET.mes_aniversario == '12' %}selected{% endif %}>🎂 Dezembro</option>
+                    </select>
+                </div>
+
+                <div class="col-md-3 mt-2">
+                    <select name="mes_validade" class="form-select" style="border-color: #0618B5; color: #0618B5; font-weight: 500;">
+                        <option value="">🪪 Mês Validade Doc...</option>
+                        <option value="1" {% if request.GET.mes_validade == '1' %}selected{% endif %}>🪪 Janeiro</option>
+                        <option value="2" {% if request.GET.mes_validade == '2' %}selected{% endif %}>🪪 Fevereiro</option>
+                        <option value="3" {% if request.GET.mes_validade == '3' %}selected{% endif %}>🪪 Março</option>
+                        <option value="4" {% if request.GET.mes_validade == '4' %}selected{% endif %}>🪪 Abril</option>
+                        <option value="5" {% if request.GET.mes_validade == '5' %}selected{% endif %}>🪪 Maio</option>
+                        <option value="6" {% if request.GET.mes_validade == '6' %}selected{% endif %}>🪪 Junho</option>
+                        <option value="7" {% if request.GET.mes_validade == '7' %}selected{% endif %}>🪪 Julho</option>
+                        <option value="8" {% if request.GET.mes_validade == '8' %}selected{% endif %}>🪪 Agosto</option>
+                        <option value="9" {% if request.GET.mes_validade == '9' %}selected{% endif %}>🪪 Setembro</option>
+                        <option value="10" {% if request.GET.mes_validade == '10' %}selected{% endif %}>🪪 Outubro</option>
+                        <option value="11" {% if request.GET.mes_validade == '11' %}selected{% endif %}>🪪 Novembro</option>
+                        <option value="12" {% if request.GET.mes_validade == '12' %}selected{% endif %}>🪪 Dezembro</option>
+                    </select>
+                </div>
+
+                <div class="col-md-3 mt-2">
+                    <select name="ano_validade" class="form-select" style="border-color: #0618B5; color: #0618B5; font-weight: 500;">
+                        <option value="">📅 Ano Validade ({{ ano_atual }})</option>
+                        <option value="{{ ano_atual }}" {% if request.GET.ano_validade == ano_atual|stringformat:"s" %}selected{% endif %}>📅 Apenas {{ ano_atual }} (Atual)</option>
+                        <option value="{{ proximo_ano }}" {% if request.GET.ano_validade == proximo_ano|stringformat:"s" %}selected{% endif %}>📅 Apenas {{ proximo_ano }} (Próximo)</option>
+                        <option value="expirados" {% if request.GET.ano_validade == 'expirados' %}selected{% endif %}>🚨 Todos os Já Expirados</option>
+                        <option value="todos" {% if request.GET.ano_validade == 'todos' %}selected{% endif %}>📅 Todos os Anos</option>
+                    </select>
+                </div>
+
+                <div class="col-md-3 d-flex gap-2 mt-2">
+                    <button type="submit" class="btn btn-outline-corporate w-100" style="background-color: #ffffff; color: #0618B5; border: 1.5px solid #0618B5; font-weight: 600;">🔍 Filtrar</button>
+                    <a href="{% url 'listar_clientes' %}" class="btn btn-outline-corporate w-100" style="background-color: #ffffff; color: #0618B5; border: 1.5px solid #0618B5; font-weight: 600;">Limpar</a>
+                </div>
+            </form>
+        </div>
+
+        <!-- Tabela de Clientes -->
+        <div class="card shadow-sm overflow-hidden bg-white">
+            <div class="card-header card-header-corporate py-3" style="background-color: #0618B5; color: #ffffff;">
+                <h5 class="mb-0 fw-semibold">📋 Lista de Clientes Registados</h5>
+            </div>
+            <div class="table-responsive mb-0">
+                <table class="table table-hover align-middle mb-0">
+                    <thead style="border-bottom: 2px solid #0618B5;">
+                        <tr>
+                            <th class="py-3 ps-4" style="width: 28%;">
+                                <a href="?q={{ request.GET.q }}&qualificacao={{ request.GET.qualificacao }}&interesse={{ request.GET.interesse }}&mes_aniversario={{ request.GET.mes_aniversario }}&mes_validade={{ request.GET.mes_validade }}&ano_validade={{ request.GET.ano_validade }}&ordem={% if ordem_atual == 'nome_asc' %}nome_desc{% else %}nome_asc{% endif %}" 
+                                   class="text-decoration-none d-flex align-items-center gap-1" style="color: #0618B5;">
+                                    Nome Completo
+                                    {% if ordem_atual == 'nome_asc' %}<span>▲</span>
+                                    {% elif ordem_atual == 'nome_desc' %}<span>▼</span>
+                                    {% else %}<span class="text-muted small">⇅</span>{% endif %}
+                                </a>
+                            </th>
+                            <th class="py-3 text-nowrap" style="color: #0618B5;">Telefone</th>
+                            <th class="py-3 text-nowrap" style="color: #0618B5;">E-mail</th>
+                            <th class="py-3 text-nowrap">
+                                <a href="?q={{ request.GET.q }}&qualificacao={{ request.GET.qualificacao }}&interesse={{ request.GET.interesse }}&mes_aniversario={{ request.GET.mes_aniversario }}&mes_validade={{ request.GET.mes_validade }}&ano_validade={{ request.GET.ano_validade }}&ordem={% if ordem_atual == 'interesse_asc' %}interesse_desc{% else %}interesse_asc{% endif %}" 
+                                   class="text-decoration-none d-flex align-items-center gap-1" style="color: #0618B5;">
+                                    Interesse / Qualif.
+                                    {% if ordem_atual == 'interesse_asc' %}<span>▲</span>
+                                    {% elif ordem_atual == 'interesse_desc' %}<span>▼</span>
+                                    {% else %}<span class="text-muted small">⇅</span>{% endif %}
+                                </a>
+                            </th>
+                            <th class="py-3 text-center text-nowrap" style="color: #0618B5;">RGPD</th>
+                            <th class="py-3 text-end pe-3 text-nowrap" style="color: #0618B5;">Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for cliente in clientes %}
+                        <tr>
+                            <!-- 1. Nome Completo (com quebra natural para nomes de empresas compridos) -->
+                            <td class="ps-4 fw-bold" style="max-width: 260px;">
+                                <a href="{% url 'detalhe_cliente' cliente.pk %}" class="text-decoration-none" style="color: #0618B5;">
+                                    {{ cliente.nome_completo }}
+                                </a>
+                                <div class="mt-1">
+                                    {% if cliente.data_nascimento %}
+                                        <span class="badge me-1" style="background-color: #e0e7ff; color: #0618B5; border: 1px solid #c7d2fe;">
+                                            🎂 {{ cliente.data_nascimento|date:"d/m" }}
+                                        </span>
+                                    {% endif %}
+                                    {% if cliente.data_validade_documento %}
+                                        {% if cliente.data_validade_documento < hoje %}
+                                            <span class="badge badge-danger-soft" style="background-color: #fee2e2; color: #991b1b; border: 1px solid #fecaca;">
+                                                🚨 Doc. Expirado: {{ cliente.data_validade_documento|date:"d/m/Y" }}
+                                            </span>
+                                        {% else %}
+                                            <span class="badge badge-warning-soft" style="background-color: #fef3c7; color: #92400e; border: 1px solid #fde68a;">
+                                                🪪 Validade Doc: {{ cliente.data_validade_documento|date:"d/m/Y" }}
+                                            </span>
+                                        {% endif %}
+                                    {% endif %}
+                                </div>
+                            </td>
+
+                            <!-- 2. Telefone -->
+                            <td class="fw-semibold text-nowrap" style="color: #0618B5;">
+                                {{ cliente.telefone_principal }}
+                            </td>
+
+                            <!-- 3. E-mail (máx. 165px) -->
+                            <td class="text-muted text-truncate" style="max-width: 165px;" title="{{ cliente.email_principal }}">
+                                {{ cliente.email_principal|default:"-" }}
+                            </td>
+
+                            <!-- 4. Interesse / Qualificação -->
+                            <td>
+                                {% if cliente.area_interesse %}
+                                    <span class="badge badge-corporate-red mb-1 d-inline-block" style="background-color: #be123c; color: #ffffff;">{{ cliente.area_interesse }}</span><br>
+                                {% endif %}
+                                {% if cliente.qualificacao %}
+                                    <span class="badge badge-corporate-red" style="background-color: #be123c; color: #ffffff;">{{ cliente.qualificacao }}</span>
+                                {% endif %}
+                                {% if not cliente.area_interesse and not cliente.qualificacao %}
+                                    <span class="text-muted">-</span>
+                                {% endif %}
+                            </td>
+
+                            <!-- 5. RGPD -->
+                            <td class="text-center text-nowrap">
+                                {% if cliente.consentimento_marketing %}
+                                    <span class="badge badge-corporate-red" style="background-color: #be123c; color: #ffffff;">✓ Opt-in Ativo</span>
+                                {% else %}
+                                    <span class="badge badge-warning-soft" style="background-color: #fef3c7; color: #92400e; border: 1px solid #fde68a;">⚠️ Sem Consentimento</span>
+                                {% endif %}
+                            </td>
+
+                            <!-- 6. Ações (Botões compactos com Atalho Inteligente WhatsApp + RGPD) -->
+                            <td class="text-end pe-3 text-nowrap">
+                                <div class="d-inline-flex gap-1">
+                                    {% if cliente.consentimento_marketing and cliente.telefone_principal %}
+                                        <a href="{% url 'atalho_whatsapp_rapido' cliente.pk %}?tipo={% if request.GET.mes_aniversario %}aniversario{% elif request.GET.mes_validade or request.GET.ano_validade %}validade{% else %}geral{% endif %}" 
+                                           target="_blank"
+                                           class="btn btn-sm px-2 text-white" 
+                                           style="background-color: #16a34a; border: 1.5px solid #16a34a; font-weight: 600;"
+                                           title="{% if request.GET.mes_aniversario %}Enviar Parabéns por WhatsApp{% elif request.GET.mes_validade or request.GET.ano_validade %}Enviar Aviso de Documento por WhatsApp{% else %}Enviar WhatsApp Rápido{% endif %}">
+                                            💬
+                                        </a>
+                                    {% else %}
+                                        <button type="button" class="btn btn-sm btn-light border px-2 text-muted" disabled title="Envio bloqueado (Sem Consentimento RGPD ou sem telefone)">
+                                            🚫
+                                        </button>
+                                    {% endif %}
+                                    <a href="{% url 'detalhe_cliente' cliente.pk %}" class="btn btn-sm btn-outline-corporate px-2" style="background-color: #ffffff; color: #0618B5; border: 1.5px solid #0618B5; font-weight: 600;">
+                                        📋 Histórico
+                                    </a>
+                                    <a href="{% url 'editar_cliente' cliente.pk %}" class="btn btn-sm btn-outline-corporate px-2" style="background-color: #ffffff; color: #0618B5; border: 1.5px solid #0618B5; font-weight: 600;">
+                                        ✏️ Editar
+                                    </a>
+                                </div>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="6" class="text-center py-4 text-muted">Nenhum cliente encontrado para este filtro.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Importação de Excel -->
+    <div class="modal fade" id="modalImportarExcel" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-centered">
+            <div class="modal-content border-0 shadow">
+                <div class="modal-header py-3" style="background-color: #0618B5; color: #ffffff;">
+                    <h5 class="modal-title fw-bold">📥 Importar Clientes via Planilha Excel (.xlsx)</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <form method="post" action="{% url 'importar_clientes_excel' %}" enctype="multipart/form-data">
+                    {% csrf_token %}
+                    <div class="modal-body p-4 bg-white">
+                        <p class="text-secondary mb-3">
+                            Para importar os seus contactos de uma só vez, certifique-se de que a sua folha de Excel (<strong>.xlsx</strong>) segue esta ordem de colunas a partir da <strong>Linha 2</strong>:
+                        </p>
+                        <div class="table-responsive mb-4">
+                            <table class="table table-sm table-bordered text-center align-middle mb-0" style="font-size: 0.78rem;">
+                                <thead style="background-color: #0618B5; color: #ffffff;">
+                                    <tr>
+                                        <th>A</th><th>B</th><th>C</th><th>D</th><th>E</th><th>F</th><th>G</th><th>H</th><th>I</th><th>J</th><th>K</th><th>L</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr class="fw-bold" style="color: #0618B5; background-color: #f8fafc;">
+                                        <td>Nome*</td><td>Nascim.</td><td>Telemóvel*</td><td>Email</td><td>Naturalid.</td><td>Validade Doc.</td><td>Morada</td><td>Cód. Postal</td><td>Referência</td><td>Morada Imóvel</td><td>CP Imóvel</td><td>Consent.</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-bold" style="color: #0618B5;">Selecionar Ficheiro Excel (.xlsx)</label>
+                            <input type="file" name="ficheiro_excel" class="form-control" accept=".xlsx" required>
+                        </div>
+                    </div>
+                    <div class="modal-footer bg-light">
+                        <button type="button" class="btn btn-light border text-secondary px-4" data-bs-dismiss="modal">Cancelar</button>
+                        <button type="submit" class="btn btn-outline-corporate px-4" style="background-color: #ffffff; color: #0618B5; border: 1.5px solid #0618B5; font-weight: 600;">
+                            🚀 Iniciar Importação
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    <!-- Modal de Campanha em Lote (E-mail Marketing / Boas Festas com Proteção RGPD) -->
+    <div class="modal fade" id="modalCampanhaLote" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-centered">
+            <div class="modal-content border-0 shadow">
+                <div class="modal-header py-3" style="background-color: #0618B5; color: #ffffff; border-bottom: 4px solid #be123c;">
+                    <h5 class="modal-title fw-bold">📣 Disparar Campanha em Lote (E-mail HTML)</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <form method="post" action="{% url 'enviar_campanha_lote' %}" enctype="multipart/form-data">
+                    {% csrf_token %}
+                    <!-- Preserva os filtros atuais do painel caso escolha enviar apenas para a lista filtrada -->
+                    <input type="hidden" name="filtro_q" value="{{ request.GET.q }}">
+                    <input type="hidden" name="filtro_qualificacao" value="{{ request.GET.qualificacao }}">
+                    <input type="hidden" name="filtro_interesse" value="{{ request.GET.interesse }}">
+                    <input type="hidden" name="filtro_mes_aniversario" value="{{ request.GET.mes_aniversario }}">
+                    <input type="hidden" name="filtro_mes_validade" value="{{ request.GET.mes_validade }}">
+                    <input type="hidden" name="filtro_ano_validade" value="{{ request.GET.ano_validade }}">
+
+                    <div class="modal-body p-4 bg-white">
+                        <!-- Aviso de Conformidade RGPD -->
+                        <div class="p-3 mb-3 rounded d-flex justify-content-between align-items-center" style="background-color: #f8fafc; border-left: 4px solid #0618B5;">
+                            <div>
+                                <strong style="color: #0618B5;">🛡️ Filtro Automático RGPD Ativo:</strong>
+                                <div class="small text-secondary">Clientes marcados como <em>"Sem Consentimento"</em> ou sem e-mail são ignorados automaticamente.</div>
+                            </div>
+                            <span class="badge px-3 py-2" style="background-color: #be123c; color: #ffffff; font-size: 0.9rem;">
+                                ✓ {{ total_elegiveis_lote }} Elegíveis no Filtro
+                            </span>
+                        </div>
+
+                        <div class="row g-3 mb-3">
+                            <div class="col-md-7">
+                                <label class="form-label fw-bold" style="color: #0618B5;">Destinatários da Campanha</label>
+                                <select name="escopo" class="form-select" style="border-color: #0618B5;">
+                                    <option value="filtrados">🎯 Apenas os clientes filtrados atualmente no ecrã ({{ total_elegiveis_lote }} com Opt-in)</option>
+                                    <option value="todos">🌍 Todos os clientes da base de dados com Opt-in RGPD ativo</option>
+                                </select>
+                            </div>
+                            <div class="col-md-5">
+                                <label class="form-label fw-bold" style="color: #0618B5;">Tamanho de cada Grupo (Lote)</label>
+                                <select name="tamanho_lote" class="form-select" style="border-color: #0618B5;">
+                                    <option value="5">📦 De 5 em 5 e-mails (Teste / Seguro)</option>
+                                    <option value="15" selected>📦 De 15 em 15 e-mails (Recomendado)</option>
+                                    <option value="30">📦 De 30 em 30 e-mails</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- Botões de Modelos Rápidos para Lote -->
+                        <div class="mb-3">
+                            <small class="text-muted fw-bold d-block mb-2">⚡ Preencher com Modelo de Campanha:</small>
+                            <div class="d-flex flex-wrap gap-2">
+                                <button type="button" class="btn btn-sm btn-light border fw-semibold" style="color: #0618B5;" onclick="preencherCampanha('natal')">
+                                    🎄 Feliz Natal e Boas Festas (HTML)
+                                </button>
+                                <button type="button" class="btn btn-sm btn-light border fw-semibold" style="color: #0618B5;" onclick="preencherCampanha('aniversariantes')">
+                                    🎂 Parabéns Aniversariantes do Mês
+                                </button>
+                                <button type="button" class="btn btn-sm btn-light border fw-semibold" style="color: #0618B5;" onclick="preencherCampanha('newsletter')">
+                                    🏢 Newsletter Imobiliária (HTML)
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="row g-3">
+                            <div class="col-md-7">
+                                <label class="form-label fw-bold" style="color: #0618B5;">Assunto do E-mail</label>
+                                <input type="text" name="assunto" id="loteAssunto" class="form-control" placeholder="Ex: 🎄 Votos de um Feliz Natal, {{ nome }}!" required>
+                            </div>
+                            <div class="col-md-5">
+                                <label class="form-label fw-bold" style="color: #0618B5;">📂 Ou Carregar Ficheiro .HTML</label>
+                                <input type="file" name="ficheiro_html" class="form-control" accept=".html,.htm">
+                            </div>
+                            <div class="col-md-12">
+                                <label class="form-label fw-bold" style="color: #0618B5;">
+                                    Conteúdo / Código HTML <small class="text-muted fw-normal">(O sistema troca <code>&#123;&#123; nome &#125;&#125;</code> pelo nome de cada cliente automaticamente)</small>
+                                </label>
+                                <textarea name="conteudo" id="loteConteudo" rows="6" class="form-control font-monospace" style="font-size: 0.88rem;" placeholder="Escreva a mensagem ou cole o código HTML da campanha..."></textarea>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="d-flex gap-2">
+                            <button type="button" class="btn btn-light border text-secondary px-3" data-bs-dismiss="modal">Cancelar</button>
+                            <button type="submit" formaction="{% url 'preparar_campanha_whatsapp' %}" class="btn px-3 fw-bold text-white" style="background-color: #16a34a;">
+                                💬 Gerar Fila WhatsApp
+                            </button>
+                            <button type="submit" class="btn px-4 fw-bold text-white" style="background-color: #be123c;">
+                                🚀 Enviar E-mails em Lotes
+                            </button>
+                        </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    function preencherCampanha(tipo) {
+        const assunto = document.getElementById('loteAssunto');
+        const conteudo = document.getElementById('loteConteudo');
+        if (tipo === 'natal') {
+            assunto.value = "🎄 Votos de um Feliz Natal e Próspero Ano Novo, {{ nome }}!";
+            conteudo.value = `<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden;">
+    <div style="background-color: #be123c; color: #ffffff; padding: 24px; text-align: center; border-bottom: 4px solid #0618B5;">
+        <h2 style="margin: 0;">🎄 Boas Festas e Feliz Natal!</h2>
+    </div>
+    <div style="padding: 24px; color: #1e293b; line-height: 1.6;">
+        <p>Olá <strong>{{ nome }}</strong>,</p>
+        <p>Nesta época especial, quero agradecer a sua confiança e desejar-lhe um <strong>Feliz Natal</strong> e um novo ano repleto de saúde, paz e excelentes conquistas!</p>
+        <p>Continuarei ao seu inteiro dispor para todos os seus projetos imobiliários.</p>
+        <p style="margin-top: 25px;">Um abraço caloroso,<br><strong style="color: #0618B5;">A sua Consultora Imobiliária</strong></p>
+    </div>
+</div>`;
+        } else if (tipo === 'aniversariantes') {
+            assunto.value = "🎂 Muitos Parabéns pelo seu Aniversário, {{ nome }}!";
+            conteudo.value = "Olá {{ nome }},\n\nDesejo-lhe um excelente dia de aniversário, repleto de saúde, alegria e realizações!\n\nUm grande abraço,\nA sua Consultora Imobiliária";
+        } else if (tipo === 'newsletter') {
+            assunto.value = "🏢 Oportunidades Imobiliárias em Destaque para Si";
+            conteudo.value = `<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden;">
+    <div style="background-color: #0618B5; color: #ffffff; padding: 20px; text-align: center;">
+        <h2 style="margin: 0;">🏢 Novidades do Mercado Imobiliário</h2>
+    </div>
+    <div style="padding: 20px; color: #1e293b; line-height: 1.6;">
+        <p>Olá <strong>{{ nome }}</strong>,</p>
+        <p>Acabaram de entrar em carteira novos imóveis selecionados que podem ser do seu interesse.</p>
+        <p>Responda a este e-mail se desejar receber os detalhes em primeira mão!</p>
+    </div>
+</div>`;
+        }
+    }
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

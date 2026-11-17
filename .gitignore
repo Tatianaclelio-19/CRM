@@ -1,0 +1,31 @@
+# Ambiente virtual
+venv/
+meuvenv/
+
+# Base de dados local e Backups (Proteção RGPD)
+db.sqlite3
+*.sqlite3
+*.sql
+*.sql.gz
+backup_dados.json
+
+# Ficheiros de dados / Planilhas de teste
+*.xlsx
+*.csv
+
+# Ficheiros estáticos gerados
+staticfiles/
+
+# Python e Variáveis de Ambiente
+__pycache__/
+*.py[cod]
+*$py.class
+.env
+*.log
+
+# VS Code
+.vscode/
+
+# Sistemas Operativos (Windows e macOS)
+Thumbs.db
+.DS_Store

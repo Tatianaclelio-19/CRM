@@ -1,0 +1,66 @@
+:root {
+    --primary-blue: #0618B5;       /* Novo Azul Royal Intenso */
+    --accent-red: #be123c;         /* Vermelho Sofisticado para Etiquetas */
+    --bg-light: #f8fafc;           /* Fundo geral limpo */
+}
+
+body {
+    background-color: var(--bg-light);
+    color: #1e293b;
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+
+.card {
+    border: none;
+    border-radius: 0.5rem;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.06), 0 2px 4px -1px rgba(0, 0, 0, 0.04);
+}
+
+/* Todos os Cabeçalhos em Azul #0618B5 */
+.card-header-corporate {
+    background-color: #0618B5 !important;
+    color: #ffffff !important;
+    font-weight: 600;
+}
+
+/* Botões: Fundo Branco, Borda e Letra Azul #0618B5 */
+.btn-outline-corporate {
+    background-color: #ffffff !important;
+    color: #0618B5 !important;
+    border: 1.5px solid #0618B5 !important;
+    font-weight: 600;
+    transition: all 0.2s ease-in-out;
+}
+
+.btn-outline-corporate:hover, .btn-outline-corporate:focus {
+    background-color: #0618B5 !important;
+    color: #ffffff !important;
+}
+
+/* Etiquetas de Ação em Vermelho */
+.badge-corporate-red {
+    background-color: #be123c !important;
+    color: #ffffff !important;
+    font-weight: 500;
+    padding: 0.4em 0.75em;
+}
+
+/* Alertas em Amarelo e Vermelho Suave */
+.badge-warning-soft {
+    background-color: #fef3c7 !important;
+    color: #92400e !important;
+    border: 1px solid #fde68a !important;
+    font-weight: 600;
+}
+
+.badge-danger-soft {
+    background-color: #fee2e2 !important;
+    color: #991b1b !important;
+    border: 1px solid #fecaca !important;
+    font-weight: 600;
+}
+
+.form-control:focus, .form-select:focus {
+    border-color: #0618B5;
+    box-shadow: 0 0 0 0.2rem rgba(6, 24, 181, 0.15);
+}
