@@ -16,6 +16,7 @@ from urllib.parse import quote
 import time
 from django.core.mail import EmailMultiAlternatives, get_connection
 from django.http import JsonResponse
+from django.conf import settings
 
 @login_required
 @sensitive_post_parameters('nif', 'tipo_documento', 'telefone_principal', 'email_principal', 'morada')
@@ -733,3 +734,79 @@ def registar_envio_whatsapp_lote(request, pk):
         )
         return JsonResponse({'status': 'ok'})
     return JsonResponse({'status': 'erro'}, status=400)
+@login_required
+def apagar_dados_cliente_rgpd(request, pk):
+    """Elimina definitivamente os dados do cliente (Art. 17.º RGPD) e envia notificação de confirmação."""
+    cliente = get_object_or_404(Cliente, pk=pk)
+
+    if request.method == 'POST':
+        nome_limpo = " ".join(str(cliente.nome_completo).splitlines()).strip()
+        email_limpo = "".join(str(cliente.email_principal or '').splitlines()).strip()
+        telefone_limpo = ''.join(filter(str.isdigit, str(cliente.telefone_principal or '')))
+        if len(telefone_limpo) == 9:
+            telefone_limpo = f"351{telefone_limpo}"
+
+        data_eliminacao = timezone.now().strftime('%d/%m/%Y às %H:%M')
+        notificado_por = None
+
+        # 1. Se tiver e-mail válido, envia comprovativo formal ANTES de apagar o registo
+        if email_limpo and '@' in email_limpo:
+            assunto = "Confirmação de Eliminação de Dados Pessoais (RGPD)"
+            corpo_texto = (
+                f"Exmo(a). Sr(a). {nome_limpo},\n\n"
+                f"Em conformidade com o Artigo 17.º do Regulamento Geral sobre a Proteção de Dados (RGPD), "
+                f"confirmamos que todos os seus dados pessoais, histórico de comunicações e registos associados "
+                f"foram definitivamente eliminados da nossa base de dados no dia {data_eliminacao}.\n\n"
+                f"Com os melhores cumprimentos,\n"
+                f"A Consultoria Imobiliária"
+            )
+            corpo_html = f"""
+            <div style="font-family: Arial, sans-serif; color: #1e293b; max-width: 600px; margin: 0 auto; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden;">
+                <div style="background-color: #0618B5; padding: 20px; border-bottom: 4px solid #be123c; color: #ffffff;">
+                    <strong>Confirmação de Eliminação de Dados (Art. 17.º RGPD)</strong>
+                </div>
+                <div style="padding: 24px; line-height: 1.6;">
+                    <p>Exmo(a). Sr(a). <strong>{nome_limpo}</strong>,</p>
+                    <p>Em cumprimento do seu pedido e nos termos do <strong>Artigo 17.º do Regulamento Geral sobre a Proteção de Dados (RGPD)</strong>, confirmamos que todos os seus dados pessoais, contactos e histórico de interações foram <strong>definitivamente eliminados</strong> da nossa base de dados em <strong>{data_eliminacao}</strong>.</p>
+                    <p style="color: #64748b; font-size: 13px; margin-top: 20px;">Este e-mail serve como comprovativo formal da execução do direito ao apagamento. Não receberá mais comunicações nossas.</p>
+                </div>
+            </div>
+            """
+            try:
+                email_msg = EmailMultiAlternatives(
+                    subject=assunto,
+                    body=corpo_texto,
+                    from_email=settings.DEFAULT_FROM_EMAIL,
+                    to=[email_limpo]
+                )
+                email_msg.attach_alternative(corpo_html, "text/html")
+                email_msg.send()
+                notificado_por = f"e-mail ({email_limpo})"
+            except Exception as erro_smtp:
+                print(f"ERRO SMTP RGPD: {erro_smtp}")
+                notificado_por = "erro_email"
+        # 2. Apagar definitivamente o cliente (e em cascata os seus negócios e interações)
+        cliente.delete()
+
+        # 3. Feedback à consultora (com link WhatsApp se não havia e-mail)
+        if notificado_por and notificado_por != "erro_email":
+            messages.success(
+                request,
+                f"🗑️ Dados de {nome_limpo} eliminados definitivamente (RGPD) e notificação enviada por {notificado_por}."
+            )
+        elif telefone_limpo:
+            msg_wa = quote(
+                f"Olá {nome_limpo}, confirmamos que, nos termos do Art. 17.º do RGPD, "
+                f"todos os seus dados pessoais foram definitivamente eliminados da nossa base de dados em {data_eliminacao}."
+            )
+            url_wa = f"https://wa.me/{telefone_limpo}?text={msg_wa}"
+            messages.warning(
+                request,
+                f"🗑️ Dados de {nome_limpo} eliminados da base de dados. Como não tinha e-mail registado, envie o comprovativo por WhatsApp: {url_wa}"
+            )
+        else:
+            messages.success(request, f"🗑️ Dados de {nome_limpo} eliminados definitivamente da base de dados (Art. 17.º RGPD).")
+
+        return redirect('listar_clientes')
+
+    return redirect('detalhe_cliente', pk=pk)
