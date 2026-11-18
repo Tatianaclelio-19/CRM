@@ -14,4 +14,4 @@ urlpatterns = [
     path('optout/<str:token>/', views.cancelar_consentimento_rgpd, name='cancelar_consentimento_rgpd'),
     path('campanha-whatsapp/', views.preparar_campanha_whatsapp, name='preparar_campanha_whatsapp'),
     path('cliente/<int:pk>/apagar-rgpd/', views.apagar_dados_cliente_rgpd, name='apagar_dados_cliente_rgpd'),
-]
+    ]

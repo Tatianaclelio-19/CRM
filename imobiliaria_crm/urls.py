@@ -22,5 +22,6 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('login/', auth_views.LoginView.as_view(template_name='crm_core/login.html'), name='login'),
     path('logout/', auth_views.LogoutView.as_view(), name='logout'),
+    path('campanha-whatsapp/registar-lote/', views.registar_envio_whatsapp_lote, name='registar_envio_whatsapp_lote'),
     path('clientes/', include('crm_core.urls')),
 ]
