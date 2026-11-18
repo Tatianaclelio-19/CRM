@@ -13,5 +13,6 @@ urlpatterns = [
     path('<int:pk>/whatsapp-rapido/', views.atalho_whatsapp_rapido, name='atalho_whatsapp_rapido'),
     path('optout/<str:token>/', views.cancelar_consentimento_rgpd, name='cancelar_consentimento_rgpd'),
     path('campanha-whatsapp/', views.preparar_campanha_whatsapp, name='preparar_campanha_whatsapp'),
+    path('campanha-whatsapp/registar-lote/<int:pk>/', views.registar_envio_whatsapp_lote, name='registar_envio_whatsapp_lote'),
     path('cliente/<int:pk>/apagar-rgpd/', views.apagar_dados_cliente_rgpd, name='apagar_dados_cliente_rgpd'),
-    ]
+]
