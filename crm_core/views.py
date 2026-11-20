@@ -41,8 +41,8 @@ def listar_clientes(request):
     qualificacao = request.GET.get('qualificacao', '').strip()
     interesse = request.GET.get('interesse', '').strip()
     mes_aniversario = request.GET.get('mes_aniversario', '').strip()
-    mes_validade = request.GET.get('mes_validade', '').strip()
-    ano_validade = request.GET.get('ano_validade', '').strip()
+    validade_mes_ano = request.GET.get('validade_mes_ano', '').strip()
+    apenas_expirados = request.GET.get('apenas_expirados', '').strip()
     ordem = request.GET.get('ordem', 'nome_asc').strip()
 
     if q:
@@ -56,25 +56,21 @@ def listar_clientes(request):
     if mes_aniversario and mes_aniversario.isdigit():
         clientes = clientes.filter(data_nascimento__month=int(mes_aniversario))
 
-    # 2. Filtro de Validade do Documento (Mês + Ano/Estado + Com Negócio)
-    if mes_validade or ano_validade:
-        clientes = clientes.filter(
-            negocios__isnull=False
-        ).exclude(
-            Q(tipo_documento__isnull=True) | Q(tipo_documento='')
-        )
-        
-        if mes_validade and mes_validade.isdigit():
-            clientes = clientes.filter(data_validade_documento__month=int(mes_validade))
-            
-        if ano_validade == 'expirados':
+    # 2. Filtro de Validade do Documento (Campo único AAAA-MM + Checkbox Expirados)
+    if validade_mes_ano or apenas_expirados:
+        clientes = clientes.filter(data_validade_documento__isnull=False)
+
+        if validade_mes_ano and '-' in validade_mes_ano:
+            ano_str, mes_str = validade_mes_ano.split('-')
+            if ano_str.isdigit() and mes_str.isdigit():
+                clientes = clientes.filter(
+                    data_validade_documento__year=int(ano_str),
+                    data_validade_documento__month=int(mes_str)
+                )
+
+        if apenas_expirados == '1':
             clientes = clientes.filter(data_validade_documento__lt=hoje)
-        elif ano_validade and ano_validade.isdigit():
-            clientes = clientes.filter(data_validade_documento__year=int(ano_validade))
-        elif mes_validade and not ano_validade:
-            # Se escolheu apenas o Mês, filtra automaticamente pelo Ano Atual (ex: 2026)
-            clientes = clientes.filter(data_validade_documento__year=hoje.year)
-            
+
         clientes = clientes.distinct()
 
     # Lógica de ordenação estilo Excel (Padrão: Nome de A a Z)
@@ -87,7 +83,7 @@ def listar_clientes(request):
         'validade_desc': '-data_validade_documento',
     }
     
-    if (mes_validade or ano_validade) and 'ordem' not in request.GET:
+    if (validade_mes_ano or apenas_expirados) and 'ordem' not in request.GET:
         clientes = clientes.order_by('data_validade_documento', Lower('nome_completo'))
     elif mes_aniversario and 'ordem' not in request.GET:
         clientes = clientes.order_by('data_nascimento__day', Lower('nome_completo'))
@@ -455,8 +451,8 @@ def enviar_campanha_lote(request):
             qualificacao = request.POST.get('filtro_qualificacao', '').strip()
             interesse = request.POST.get('filtro_interesse', '').strip()
             mes_aniversario = request.POST.get('filtro_mes_aniversario', '').strip()
-            mes_validade = request.POST.get('filtro_mes_validade', '').strip()
-            ano_validade = request.POST.get('filtro_ano_validade', '').strip()
+            validade_mes_ano = request.POST.get('filtro_validade_mes_ano', '').strip()
+            apenas_expirados = request.POST.get('filtro_apenas_expirados', '').strip()
 
             if q:
                 clientes = clientes.filter(nome_completo__icontains=q)
@@ -466,18 +462,17 @@ def enviar_campanha_lote(request):
                 clientes = clientes.filter(area_interesse__icontains=interesse)
             if mes_aniversario and mes_aniversario.isdigit():
                 clientes = clientes.filter(data_nascimento__month=int(mes_aniversario))
-            if mes_validade or ano_validade:
-                clientes = clientes.filter(negocios__isnull=False).exclude(
-                    Q(tipo_documento__isnull=True) | Q(tipo_documento='')
-                )
-                if mes_validade and mes_validade.isdigit():
-                    clientes = clientes.filter(data_validade_documento__month=int(mes_validade))
-                if ano_validade == 'expirados':
+            if validade_mes_ano or apenas_expirados:
+                clientes = clientes.filter(data_validade_documento__isnull=False)
+                if validade_mes_ano and '-' in validade_mes_ano:
+                    ano_str, mes_str = validade_mes_ano.split('-')
+                    if ano_str.isdigit() and mes_str.isdigit():
+                        clientes = clientes.filter(
+                            data_validade_documento__year=int(ano_str),
+                            data_validade_documento__month=int(mes_str)
+                        )
+                if apenas_expirados == '1':
                     clientes = clientes.filter(data_validade_documento__lt=hoje)
-                elif ano_validade and ano_validade.isdigit():
-                    clientes = clientes.filter(data_validade_documento__year=int(ano_validade))
-                elif mes_validade and not ano_validade:
-                    clientes = clientes.filter(data_validade_documento__year=hoje.year)
                 clientes = clientes.distinct()
 
         lista_destinatarios = list(clientes)

@@ -10,16 +10,21 @@
 </head>
 <body class="py-4">
     <div class="container" style="max-width: 1000px;">
-    {% if messages %}
-        {% for message in messages %}
-            <div class="alert {% if message.tags == 'error' %}badge-danger-soft{% else %}badge-warning-soft{% endif %} p-3 mb-4 rounded shadow-sm d-flex justify-content-between align-items-center">
-                <span>{{ message }}</span>
-                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-            </div>
-        {% endfor %}
+        {% if messages %}
+            {% for message in messages %}
+                <div class="alert {% if message.tags == 'error' %}badge-danger-soft{% else %}badge-warning-soft{% endif %} p-3 mb-4 rounded shadow-sm d-flex justify-content-between align-items-center">
+                    <span>{{ message }}</span>
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            {% endfor %}
         {% endif %}
-       <!-- Topo: Voltar à esquerda | Ver Ficha Completa e Editar à direita -->
-        <div class="d-flex gap-2 flex-wrap justify-content-end">
+
+        <!-- Topo: Voltar à esquerda | Ações à direita -->
+        <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-4">
+            <a href="{% url 'listar_clientes' %}" class="btn btn-outline-corporate px-3" style="background-color: #ffffff; color: #0618B5; border: 1.5px solid #0618B5; font-weight: 600;">
+                ← Voltar à Lista
+            </a>
+            <div class="d-flex gap-2 flex-wrap justify-content-end">
                 <button type="button" class="btn px-3" data-bs-toggle="modal" data-bs-target="#modalApagarRGPD" style="background-color: #ffffff; color: #dc2626; border: 1.5px solid #dc2626; font-weight: 600;">
                     🗑️ Apagar Dados (RGPD)
                 </button>
@@ -54,7 +59,7 @@
                         <p class="mb-2"><strong style="color: #0618B5;">Qualificação:</strong> {{ cliente.qualificacao|default:"-" }}</p>
                         <p class="mb-0"><strong style="color: #0618B5;">RGPD:</strong> 
                             {% if cliente.consentimento_marketing %}
-                                <span class="badge badge-corporate-red" style="background-color: #be123c; color: #ffffff;">✓ Opt-in Ativo</span>
+                                <span class="badge" style="background-color: #16a34a; color: #ffffff;">✓ Opt-in Ativo</span>
                             {% else %}
                                 <span class="badge badge-warning-soft" style="background-color: #fef3c7; color: #92400e; border: 1px solid #fde68a;">⚠️ Sem Consentimento</span>
                             {% endif %}
@@ -63,6 +68,7 @@
                 </div>
             </div>
         </div>
+
         <!-- Ficha Completa em Modo de Consulta (Apenas Leitura) -->
         <div class="collapse mb-4" id="fichaCompletaCollapse">
             <div class="card shadow-sm bg-white">
@@ -390,37 +396,39 @@
             </div>
         </div>
     </div>
+
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
     <!-- Modal de Confirmação de Apagamento Definitivo (Art. 17.º RGPD) -->
-<div class="modal fade" id="modalApagarRGPD" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content border-danger">
-            <div class="modal-header text-white" style="background-color: #be123c;">
-                <h5 class="modal-title fw-bold">⚠️ Direito ao Apagamento (Art. 17.º RGPD)</h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Fechar"></button>
+    <div class="modal fade" id="modalApagarRGPD" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-danger">
+                <div class="modal-header text-white" style="background-color: #be123c;">
+                    <h5 class="modal-title fw-bold">⚠️ Direito ao Apagamento (Art. 17.º RGPD)</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Fechar"></button>
+                </div>
+                <form method="post" action="{% url 'apagar_dados_cliente_rgpd' cliente.pk %}">
+                    {% csrf_token %}
+                    <div class="modal-body">
+                        <p class="mb-2">Tem a certeza absoluta de que pretende <strong>eliminar definitivamente</strong> todos os dados de <strong>{{ cliente.nome_completo }}</strong>?</p>
+                        <ul class="small text-muted mb-3">
+                            <li>A ficha do cliente, os imóveis associados e todo o histórico de interações serão apagados de forma irreversível.</li>
+                            {% if cliente.email_principal %}
+                            <li>Será enviado automaticamente um <strong>e-mail oficial de confirmação</strong> para <strong>{{ cliente.email_principal }}</strong> antes da eliminação.</li>
+                            {% else %}
+                            <li class="text-danger">Este cliente não tem e-mail registado; após apagar, será gerado um link para enviar o comprovativo por WhatsApp.</li>
+                            {% endif %}
+                        </ul>
+                    </div>
+                    <div class="modal-footer bg-light">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                        <button type="submit" class="btn text-white fw-bold" style="background-color: #be123c;">
+                            Confirmar Eliminação e Notificar
+                        </button>
+                    </div>
+                </form>
             </div>
-            <form method="post" action="{% url 'apagar_dados_cliente_rgpd' cliente.pk %}">
-                {% csrf_token %}
-                <div class="modal-body">
-                    <p class="mb-2">Tem a certeza absoluta de que pretende <strong>eliminar definitivamente</strong> todos os dados de <strong>{{ cliente.nome_completo }}</strong>?</p>
-                    <ul class="small text-muted mb-3">
-                        <li>A ficha do cliente, os imóveis associados e todo o histórico de interações serão apagados de forma irreversível.</li>
-                        {% if cliente.email_principal %}
-                        <li>Será enviado automaticamente um <strong>e-mail oficial de confirmação</strong> para <strong>{{ cliente.email_principal }}</strong> antes da eliminação.</li>
-                        {% else %}
-                        <li class="text-danger">Este cliente não tem e-mail registado; após apagar, será gerado um link para enviar o comprovativo por WhatsApp.</li>
-                        {% endif %}
-                    </ul>
-                </div>
-                <div class="modal-footer bg-light">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                    <button type="submit" class="btn text-white fw-bold" style="background-color: #be123c;">
-                        Confirmar Eliminação e Notificar
-                    </button>
-                </div>
-            </form>
         </div>
     </div>
-</div>
 </body>
 </html>

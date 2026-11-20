@@ -63,7 +63,7 @@
                 <ul class="mb-0 small text-secondary">
                     {% for item in ultimos_optouts %}
                     <li class="mb-1">
-                        <strong style="color: #0618B5;">{{ item.cliente.nome_completo }}</strong> revogou o consentimento em {{ item.data_interacao|date:"d/m/Y às H:i" }} — 
+                        <strong style="color: #0618B5;">{{ item.cliente.nome_completo }}</strong> revogou o consentimento em {{ revogacao.data_revogacao|date:"d/m/Y \à\s H:i" }} — 
                         <a href="{% url 'detalhe_cliente' item.cliente.pk %}" class="fw-bold text-decoration-none" style="color: #be123c;">Ver Ficha</a>
                     </li>
                     {% endfor %}
@@ -88,6 +88,7 @@
                         <option value="Arrendatário" {% if request.GET.qualificacao == 'Arrendatário' %}selected{% endif %}>🏷️ Arrendatário</option>
                         <option value="Investidor" {% if request.GET.qualificacao == 'Investidor' %}selected{% endif %}>🏷️ Investidor</option>
                         <option value="Lead / Potencial Cliente" {% if request.GET.qualificacao == 'Lead / Potencial Cliente' %}selected{% endif %}>🏷️ Lead / Potencial Cliente</option>
+                        <option value="Parceria Comercial" {% if request.GET.qualificacao == 'Parceria Comercial / Potencial Cliente' %}selected{% endif %}>🏷️ Parceria Comercial</option>
                     </select>
                 </div>
                 <div class="col-md-4">
@@ -113,32 +114,27 @@
                     </select>
                 </div>
 
+                <!-- Filtro Único de Validade (Mês e Ano) -->
                 <div class="col-md-3 mt-2">
-                    <select name="mes_validade" class="form-select" style="border-color: #0618B5; color: #0618B5; font-weight: 500;">
-                        <option value="">🪪 Mês Validade Doc...</option>
-                        <option value="1" {% if request.GET.mes_validade == '1' %}selected{% endif %}>🪪 Janeiro</option>
-                        <option value="2" {% if request.GET.mes_validade == '2' %}selected{% endif %}>🪪 Fevereiro</option>
-                        <option value="3" {% if request.GET.mes_validade == '3' %}selected{% endif %}>🪪 Março</option>
-                        <option value="4" {% if request.GET.mes_validade == '4' %}selected{% endif %}>🪪 Abril</option>
-                        <option value="5" {% if request.GET.mes_validade == '5' %}selected{% endif %}>🪪 Maio</option>
-                        <option value="6" {% if request.GET.mes_validade == '6' %}selected{% endif %}>🪪 Junho</option>
-                        <option value="7" {% if request.GET.mes_validade == '7' %}selected{% endif %}>🪪 Julho</option>
-                        <option value="8" {% if request.GET.mes_validade == '8' %}selected{% endif %}>🪪 Agosto</option>
-                        <option value="9" {% if request.GET.mes_validade == '9' %}selected{% endif %}>🪪 Setembro</option>
-                        <option value="10" {% if request.GET.mes_validade == '10' %}selected{% endif %}>🪪 Outubro</option>
-                        <option value="11" {% if request.GET.mes_validade == '11' %}selected{% endif %}>🪪 Novembro</option>
-                        <option value="12" {% if request.GET.mes_validade == '12' %}selected{% endif %}>🪪 Dezembro</option>
-                    </select>
+                    <div class="input-group">
+                        <span class="input-group-text bg-white" style="border-color: #0618B5; color: #0618B5;" title="Validade do Documento (Mês/Ano)">🪪</span>
+                        <input type="month" 
+                               name="validade_mes_ano" 
+                               class="form-control" 
+                               style="border-color: #0618B5; color: #0618B5; font-weight: 500;"
+                               value="{{ request.GET.validade_mes_ano }}"
+                               title="Filtrar por Mês e Ano de validade do documento">
+                    </div>
                 </div>
 
-                <div class="col-md-3 mt-2">
-                    <select name="ano_validade" class="form-select" style="border-color: #0618B5; color: #0618B5; font-weight: 500;">
-                        <option value="">📅 Ano Validade ({{ ano_atual }})</option>
-                        <option value="{{ ano_atual }}" {% if request.GET.ano_validade == ano_atual|stringformat:"s" %}selected{% endif %}>📅 Apenas {{ ano_atual }} (Atual)</option>
-                        <option value="{{ proximo_ano }}" {% if request.GET.ano_validade == proximo_ano|stringformat:"s" %}selected{% endif %}>📅 Apenas {{ proximo_ano }} (Próximo)</option>
-                        <option value="expirados" {% if request.GET.ano_validade == 'expirados' %}selected{% endif %}>🚨 Todos os Já Expirados</option>
-                        <option value="todos" {% if request.GET.ano_validade == 'todos' %}selected{% endif %}>📅 Todos os Anos</option>
-                    </select>
+                <!-- Atalho Rápido: Apenas Documentos Já Expirados -->
+                <div class="col-md-2 mt-2">
+                    <label for="checkExpirados" class="form-control d-flex align-items-center justify-content-center gap-2 mb-0" style="border-color: #dc2626; background-color: #fff5f5; cursor: pointer;">
+                        <input class="form-check-input mt-0" type="checkbox" name="apenas_expirados" value="1" id="checkExpirados"
+                               style="border-color: #dc2626; cursor: pointer;"
+                               {% if request.GET.apenas_expirados %}checked{% endif %}>
+                        <span class="small fw-semibold text-danger text-nowrap">⚠️ Já expirados</span>
+                    </label>
                 </div>
 
                 <div class="col-md-3 d-flex gap-2 mt-2">
@@ -219,13 +215,13 @@
                                 {{ cliente.email_principal|default:"-" }}
                             </td>
 
-                            <!-- 4. Interesse / Qualificação -->
+                           <!-- 4. Interesse / Qualificação -->
                             <td>
                                 {% if cliente.area_interesse %}
-                                    <span class="badge badge-corporate-red mb-1 d-inline-block" style="background-color: #be123c; color: #ffffff;">{{ cliente.area_interesse }}</span><br>
+                                    <span class="badge mb-1 d-inline-block" style="background-color: #e0e7ff; color: #0618B5; border: 1px solid #c7d2fe;">{{ cliente.area_interesse }}</span><br>
                                 {% endif %}
                                 {% if cliente.qualificacao %}
-                                    <span class="badge badge-corporate-red" style="background-color: #be123c; color: #ffffff;">{{ cliente.qualificacao }}</span>
+                                    <span class="badge" style="background-color: #f1f5f9; color: #334155; border: 1px solid #cbd5e1;">{{ cliente.qualificacao }}</span>
                                 {% endif %}
                                 {% if not cliente.area_interesse and not cliente.qualificacao %}
                                     <span class="text-muted">-</span>
@@ -235,9 +231,9 @@
                             <!-- 5. RGPD -->
                             <td class="text-center text-nowrap">
                                 {% if cliente.consentimento_marketing %}
-                                    <span class="badge badge-corporate-red" style="background-color: #be123c; color: #ffffff;">✓ Opt-in Ativo</span>
+                                    <span class="badge" style="background-color: #16a34a; color: #ffffff;">✓ Opt-in Ativo</span>
                                 {% else %}
-                                    <span class="badge badge-warning-soft" style="background-color: #fef3c7; color: #92400e; border: 1px solid #fde68a;">⚠️ Sem Consentimento</span>
+                                    <span class="badge" style="background-color: #fef3c7; color: #92400e; border: 1px solid #fde68a;">⚠️ Sem Consentimento</span>
                                 {% endif %}
                             </td>
 
